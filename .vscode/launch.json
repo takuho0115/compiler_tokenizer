@@ -1,0 +1,45 @@
+{
+	// IntelliSense を使用して利用可能な属性を学べます。
+	// 既存の属性の説明をホバーして表示します。
+	// 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'tokenizer_test1'",
+			"cargo": {
+				"args": [
+					"build",
+					"--bin=tokenizer_test1",
+					"--package=tokenizer_test1"
+				],
+				"filter": {
+					"name": "tokenizer_test1",
+					"kind": "bin"
+				}
+			},
+			"args": [" 12 + 34 - 5 "],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in executable 'tokenizer_test1'",
+			"cargo": {
+				"args": [
+					"test",
+					"--no-run",
+					"--bin=tokenizer_test1",
+					"--package=tokenizer_test1"
+				],
+				"filter": {
+					"name": "tokenizer_test1",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}
