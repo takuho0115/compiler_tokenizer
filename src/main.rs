@@ -1,14 +1,15 @@
-use std::env;
+use std::{env, iter::Peekable};
 #[derive(PartialEq,Clone, Copy)]
 enum TokenKind {
 	TK_RESERVED,
 	TK_NUM,
+	TK_EOF,
 }
 
 #[derive(Clone)]
 struct Token{
 	kind: Option<TokenKind>,
-	val: Option<u32>,
+	val: Option<usize>,
 	str: Option<char>,
 }
 
@@ -27,34 +28,50 @@ impl Token {
 		}
 	}
 
-	fn expect_number(&self)->u32{
+	fn expect_number(&self)->usize{
 		if self.kind.unwrap() != TokenKind::TK_NUM{
 			panic!("数ではありません");
 		}
 		self.val.unwrap()
 	}
+
+	fn at_eof(&self)->bool{
+		self.kind == Some(TokenKind::TK_EOF)
+	}
 }
-fn tokenize(p: &str)->Vec<Token>{
-	let mut cur:Vec<Token> = Vec::new();
-	for c in p.chars(){
-		if c.is_whitespace() {
+fn read_num(c:&char, iter:&mut Peekable<impl Iterator<Item = char>>)->usize{
+	let mut join_str = String::new();
+	join_str.push(*c);
+	while !iter.peek().unwrap().to_digit(10).is_none() {
+		join_str.push(*iter.peek().unwrap());
+		iter.next();
+	}
+	join_str.parse::<usize>().unwrap()
+}
+fn tokenize(p: &str)->Vec<&Token>{
+	let mut cur:Vec<&Token> = Vec::new();
+	let mut chars = p.chars().into_iter().peekable();
+	let mut c = chars.next();
+	while !c.is_none() {
+		if c.unwrap().is_whitespace(){
 			continue;
 		}
 
-		if c == '+' || c == '-' {
-			cur.push(Token::new(TokenKind::TK_RESERVED, &c));
+		if c.unwrap() == '+' || c.unwrap() == '-' {
+			cur.push(&Token::new(TokenKind::TK_RESERVED, &c.unwrap()));
 			continue;
 		}
 
-		if !c.to_digit(10).is_none(){
-			let mut num = Token::new(TokenKind::TK_NUM, &c);
-			num.val = c.to_digit(10);
-			cur.push(num);
+		if !c.unwrap().to_digit(10).is_none(){
+			let tok = &Token::new(TokenKind::TK_NUM, &c.unwrap());
+			tok.val = Some(read_num(&c.unwrap(), &mut chars));
+			cur.push(tok);
 			continue;
 		}
 
 		panic!("トークナイズできません。");
 	}
+	cur.push(&Token::new(TokenKind::TK_EOF, &'\0'));
 	cur
 }
 
@@ -65,6 +82,7 @@ fn main(){
 	}
 
 	let token = tokenize(args[1].as_str());
+	let mut i = 0;
 
   // アセンブリの前半部分を出力
   println!(".intel_syntax noprefix");
@@ -73,7 +91,9 @@ fn main(){
 
   // 式の最初は数でなければならないので、それをチェックして
   // 最初のmov命令を出力
-  println!("  mov rax, {}", token[0].expect_number());
+  println!("  mov rax, {}", token[i].expect_number());
+
+	while 
 	for t in 1..token.len(){
 		let cur = &token[t];
 		if cur.consume('+'){
