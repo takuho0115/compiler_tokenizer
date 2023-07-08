@@ -1,4 +1,4 @@
-use std::{env, iter::Peekable};
+use std::{env, iter::{Peekable, Enumerate}, str::Chars, fmt::Error};
 #[derive(PartialEq,Clone, Copy)]
 enum TokenKind {
 	TK_RESERVED,
@@ -11,11 +11,12 @@ struct Token{
 	kind: Option<TokenKind>,
 	val: Option<usize>,
 	str: Option<char>,
+  pos: Option<usize>,
 }
 
 impl Token {
-	fn new(kind: TokenKind, str: &char)->Self{
-		Token { kind: Some(kind), val: None, str: Some(*str) }
+	fn new(kind: TokenKind, str: &char, pos: &usize)->Self{
+		Token { kind: Some(kind), val: None, str: Some(*str), pos: Some(*pos) }
 	}
 
 	fn consume(&self, op:char)->bool{
@@ -39,42 +40,55 @@ impl Token {
 		self.kind == Some(TokenKind::TK_EOF)
 	}
 }
-fn read_num(c:&char, iter:&mut Peekable<impl Iterator<Item = char>>)->usize{
+fn read_num(c:&char, iter:&mut Peekable<Enumerate<Chars>>)->usize{
 	let mut join_str = String::new();
 	join_str.push(*c);
-	while !iter.peek().unwrap().to_digit(10).is_none() {
-		join_str.push(*iter.peek().unwrap());
+	while !iter.peek().is_none() {
+		let (_i, p) = iter.peek().unwrap();
+		if p.to_digit(10).is_none(){
+			break;
+		}
+		join_str.push(*p);
 		iter.next();
 	}
 	join_str.parse::<usize>().unwrap()
 }
+
+fn at_error(s: &str, i: usize){
+	println!("{}", s);
+	print!("{}^ ", " ".repeat(i));
+}
+
 fn tokenize(p: &str)->Vec<Token>{
 	let mut cur:Vec<Token> = Vec::new();
-	let mut chars = p.chars().into_iter().peekable();
-	let mut c = chars.next();
-	while !c.is_none() {
-		if c.unwrap().is_whitespace(){
-			c = chars.next();
+	let mut chars = p.chars().into_iter().enumerate().peekable();
+	let mut current = chars.next();
+	while !current.is_none() {
+		let (i, c) = current.unwrap();
+		if c.is_whitespace(){
+			current = chars.next();
 			continue;
 		}
 
-		if c.unwrap() == '+' || c.unwrap() == '-' {
-			cur.push(Token::new(TokenKind::TK_RESERVED, &c.unwrap()));
-			c = chars.next();
+		if c == '+' || c == '-' {
+			cur.push(Token::new(TokenKind::TK_RESERVED, &c, &i));
+			current = chars.next();
 			continue;
 		}
 
-		if !c.unwrap().to_digit(10).is_none(){
-			let mut tok = Token::new(TokenKind::TK_NUM, &c.unwrap());
-			tok.val = Some(read_num(&c.unwrap(), &mut chars));
+		if !c.to_digit(10).is_none(){
+			let mut tok = Token::new(TokenKind::TK_NUM, &c, &i);
+			tok.val = Some(read_num(&c, &mut chars));
 			cur.push(tok);
-			c = chars.next();
+			current = chars.next();
 			continue;
 		}
-
+		at_error(p, i);
+		println!("トークナイズできません。");
 		panic!("トークナイズできません。");
+		
 	}
-	cur.push(Token::new(TokenKind::TK_EOF, &'\0'));
+	cur.push(Token::new(TokenKind::TK_EOF, &'\0', &chars.count()));
 	cur
 }
 
